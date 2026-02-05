@@ -22,6 +22,7 @@
 - [What is RAG?](#-what-is-rag)
 - [Key Features](#-key-features)
 - [Architecture](#-architecture)
+  ![AWS Serverless RAG Architecture](docs/architecture.jpg)
 - [Technology Stack](#-technology-stack)
 - [Prerequisites](#-prerequisites)
 - [Quick Start](#-quick-start)
