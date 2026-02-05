@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Venkata Srimannarayana Yasam - AI Assistant</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary: #0073bb;
+      --primary-dark: #005a8f;
+      --secondary: #232f3e;
+      --accent: #ff9900;
+      --success: #037f0c;
+      --danger: #d13212;
+      --grey-50: #fafafa;
+      --grey-100: #f5f5f5;
+      --grey-200: #eaeded;
+      --grey-300: #d5dbdb;
+      --grey-400: #aab7b8;
+      --grey-600: #687078;
+      --grey-700: #414750;
+      --grey-900: #1d1f23;
+      --white: #ffffff;
+      --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif;
+      background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+      color: var(--secondary);
+      line-height: 1.6;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header {
+      background: var(--white);
+      border-bottom: 3px solid var(--primary);
+      padding: 24px 20px;
+      box-shadow: var(--shadow);
+    }
+
+    .header-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .avatar {
+      width: 80px;
+      height: 80px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--white);
+      font-size: 32px;
+      font-weight: 700;
+      box-shadow: 0 4px 12px rgba(0, 115, 187, 0.3);
+      flex-shrink: 0;
+    }
+
+    .header-text h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--secondary);
+      margin-bottom: 4px;
+    }
+
+    .header-text p {
+      font-size: 15px;
+      color: var(--grey-600);
+    }
+
+    .header-text .subtitle {
+      font-size: 13px;
+      color: var(--grey-600);
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .contact-link {
+      color: var(--primary);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .contact-link:hover { text-decoration: underline; }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 32px 20px;
+      flex: 1;
+    }
+
+    .info-banner {
+      background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+      border-left: 4px solid var(--primary);
+      padding: 16px 20px;
+      border-radius: 8px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow);
+    }
+
+    .info-banner h3 {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--secondary);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .info-banner p {
+      font-size: 14px;
+      color: var(--grey-700);
+      line-height: 1.6;
+    }
+
+    .example-questions {
+      margin-top: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .example-chip {
+      background: var(--white);
+      border: 1px solid var(--primary);
+      color: var(--primary);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .example-chip:hover {
+      background: var(--primary);
+      color: var(--white);
+    }
+
+    .status-bar {
+      background: var(--white);
+      border: 1px solid var(--grey-300);
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: var(--shadow);
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--grey-700);
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--danger);
+      box-shadow: 0 0 0 3px rgba(209, 50, 18, 0.2);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    .status-dot.online {
+      background: var(--success);
+      box-shadow: 0 0 0 3px rgba(3, 127, 12, 0.2);
+      animation: none;
+    }
+
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+    .action-buttons { display: flex; gap: 10px; }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    @media (max-width: 1000px) {
+      .main-grid { grid-template-columns: 1fr; }
+    }
+
+    .panel {
+      background: var(--white);
+      border: 1px solid var(--grey-300);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .panel-header {
+      background: var(--grey-100);
+      border-bottom: 1px solid var(--grey-300);
+      padding: 16px 20px;
+    }
+
+    .panel-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--secondary);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .panel-icon { font-size: 20px; }
+    .panel-body { padding: 20px; }
+
+    .form-group { margin-bottom: 20px; }
+
+    .form-label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--secondary);
+      margin-bottom: 8px;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid var(--grey-300);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 15px;
+      color: var(--secondary);
+      background: var(--white);
+      transition: all 0.2s ease;
+      resize: vertical;
+      min-height: 120px;
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(0, 115, 187, 0.1);
+    }
+
+    .form-input:disabled {
+      background: var(--grey-100);
+      color: var(--grey-600);
+      cursor: not-allowed;
+    }
+
+    .form-hint {
+      font-size: 13px;
+      color: var(--grey-600);
+      margin-top: 6px;
+      line-height: 1.5;
+    }
+
+    .char-count {
+      text-align: right;
+      font-size: 12px;
+      color: var(--grey-600);
+      margin-top: 6px;
+      font-family: monospace;
+    }
+
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-primary {
+      background: var(--primary);
+      color: var(--white);
+      box-shadow: 0 2px 8px rgba(0, 115, 187, 0.3);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--primary-dark);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 115, 187, 0.4);
+    }
+
+    .btn-secondary {
+      background: var(--white);
+      color: var(--secondary);
+      border: 2px solid var(--grey-300);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: var(--grey-100);
+      border-color: var(--grey-400);
+    }
+
+    .button-group { display: flex; gap: 12px; margin-top: 16px; }
+
+    .chat-container { max-height: 500px; overflow-y: auto; padding: 4px; }
+    .chat-container::-webkit-scrollbar { width: 8px; }
+    .chat-container::-webkit-scrollbar-track { background: var(--grey-100); border-radius: 4px; }
+    .chat-container::-webkit-scrollbar-thumb { background: var(--grey-400); border-radius: 4px; }
+    .chat-container::-webkit-scrollbar-thumb:hover { background: var(--grey-600); }
+
+    .message { margin-bottom: 16px; animation: slideIn 0.3s ease-out; }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .message-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+
+    .message-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 14px; color: var(--white); flex-shrink: 0;
+    }
+
+    .message.user .message-avatar { background: linear-gradient(135deg, var(--accent) 0%, #ec7211 100%); }
+    .message.assistant .message-avatar { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); }
+
+    .message-meta { display: flex; flex-direction: column; gap: 2px; }
+    .message-role { font-size: 13px; font-weight: 700; color: var(--secondary); }
+    .message-time { font-size: 11px; color: var(--grey-600); font-family: monospace; }
+
+    .message-content {
+      margin-left: 42px;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .message.user .message-content {
+      background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+      border-left: 3px solid var(--accent);
+    }
+
+    .message.assistant .message-content {
+      background: var(--grey-100);
+      border-left: 3px solid var(--primary);
+    }
+
+    .alert {
+      padding: 14px 18px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: none;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .alert.show { display: block; animation: slideIn 0.3s ease-out; }
+
+    .alert-error {
+      background: #ffebee;
+      border-left: 4px solid var(--danger);
+      color: #c62828;
+    }
+
+    .alert-success {
+      background: #e8f5e9;
+      border-left: 4px solid var(--success);
+      color: #2e7d32;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: var(--white);
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .footer {
+      background: var(--white);
+      border-top: 1px solid var(--grey-300);
+      padding: 20px;
+      text-align: center;
+      margin-top: 40px;
+    }
+
+    .footer p { font-size: 13px; color: var(--grey-600); }
+
+    @media (max-width: 768px) {
+      .header-content { flex-direction: column; text-align: center; }
+      .header-text .subtitle { justify-content: center; }
+      .container { padding: 20px 16px; }
+      .status-bar { flex-direction: column; align-items: flex-start; }
+      .action-buttons { width: 100%; }
+      .action-buttons .btn { flex: 1; }
+      .example-questions { flex-direction: column; }
+      .example-chip { text-align: center; }
+    }
+  </style>
+</head>
+
+<body>
+  <header class="header">
+    <div class="header-content">
+      <div class="avatar">VS</div>
+      <div class="header-text">
+        <h1>Venkata Srimannarayana Yasam</h1>
+        <p>Software Engineer | AWS Certified Solutions Architect</p>
+        <div class="subtitle">
+          <a href="mailto:srimannarayana.yasam@gmail.com" class="contact-link">📧 srimannarayana.yasam@gmail.com</a>
+          <a href="tel:+14703383979" class="contact-link">📱 +1-470-338-3979</a>
+          <a href="https://www.linkedin.com/in/venkata-srimannarayana-yasam" target="_blank" class="contact-link">💼 LinkedIn</a>
+          <a href="https://github.com/srimannarayana-yasam" target="_blank" class="contact-link">💻 GitHub</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="info-banner">
+      <h3>👋 Welcome to my AI Assistant</h3>
+      <p>
+        Ask me anything about my background, experience, education, skills, or projects! I'm powered by Amazon Bedrock
+        and trained on my professional profile to provide accurate information about my career journey.
+      </p>
+      <div class="example-questions">
+        <div class="example-chip" onclick="askExample('What do you do?')">What do you do?</div>
+        <div class="example-chip" onclick="askExample('Where are you working?')">Where are you working?</div>
+        <div class="example-chip" onclick="askExample('When did you complete your masters?')">When did you complete your masters?</div>
+        <div class="example-chip" onclick="askExample('How many years of experience do you have?')">How many years of experience?</div>
+        <div class="example-chip" onclick="askExample('What are your AWS certifications?')">What are your AWS certifications?</div>
+      </div>
+    </div>
+
+    <div class="status-bar">
+      <div class="status-indicator">
+        <span id="statusDot" class="status-dot"></span>
+        <span id="statusText">Ready</span>
+      </div>
+      <div class="action-buttons">
+        <button id="copyBtn" class="btn btn-secondary" disabled>📋 Copy Response</button>
+        <button id="resetBtn" class="btn btn-secondary">🔄 Reset Chat</button>
+      </div>
+    </div>
+
+    <div id="alertBox" class="alert"></div>
+
+    <div class="main-grid">
+      <div class="panel">
+        <div class="panel-header">
+          <h2 class="panel-title"><span class="panel-icon">💬</span>Ask Me Anything</h2>
+        </div>
+        <div class="panel-body">
+          <div class="form-group">
+            <label class="form-label">Your Question</label>
+            <textarea
+              id="questionInput"
+              class="form-input"
+              placeholder="Example: What technologies do you work with?&#10;&#10;Example: Tell me about your experience at Capital One&#10;&#10;Example: What projects have you built?"
+            ></textarea>
+            <p class="form-hint">
+              💡 Ask about my work experience, education, skills, certifications, or projects. Press <strong>Enter</strong> to send or <strong>Shift + Enter</strong> for a new line.
+            </p>
+            <div class="char-count" id="charCount">0 / 1000</div>
+          </div>
+
+          <div class="button-group">
+            <button id="askBtn" class="btn btn-primary">🚀 Ask Question</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <h2 class="panel-title"><span class="panel-icon">💭</span>Conversation</h2>
+        </div>
+        <div class="panel-body">
+          <div id="chatContainer" class="chat-container">
+            <div class="message assistant">
+              <div class="message-header">
+                <div class="message-avatar">AI</div>
+                <div class="message-meta">
+                  <div class="message-role">AI Assistant</div>
+                  <div class="message-time">Ready</div>
+                </div>
+              </div>
+              <div class="message-content">Hi! I'm an AI assistant trained on Venkata's professional background. Ask me anything about his experience, education, skills, or projects!</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <p>© 2025 Venkata Srimannarayana Yasam • Powered by Amazon Bedrock Knowledge Base</p>
+  </footer>
+
+  <script>
+    // ==============================
+    // Configuration
+    // ==============================
+    const FUNCTION_URL = "https://gdgfaivwguee4jpj4jy2no4b5u0wowre.lambda-url.us-east-2.on.aws/";
+    const MAX_CHARS = 1000;
+
+    // ==============================
+    // DOM Elements
+    // ==============================
+    const questionInput = document.getElementById("questionInput");
+    const askBtn = document.getElementById("askBtn");
+    const resetBtn = document.getElementById("resetBtn");
+    const copyBtn = document.getElementById("copyBtn");
+    const alertBox = document.getElementById("alertBox");
+    const chatContainer = document.getElementById("chatContainer");
+    const charCount = document.getElementById("charCount");
+    const statusDot = document.getElementById("statusDot");
+    const statusText = document.getElementById("statusText");
+
+    let lastResponse = "";
+
+    // ==============================
+    // Utility Functions
+    // ==============================
+    function getTimestamp() {
+      const now = new Date();
+      return now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function showAlert(message, type = 'error') {
+      alertBox.className = `alert alert-${type} show`;
+      alertBox.textContent = message;
+      setTimeout(() => alertBox.classList.remove('show'), 5000);
+    }
+
+    function updateCharCount() {
+      const len = questionInput.value.length;
+      if (len > MAX_CHARS) questionInput.value = questionInput.value.slice(0, MAX_CHARS);
+      charCount.textContent = `${questionInput.value.length} / ${MAX_CHARS}`;
+    }
+
+    function setStatus(online, message) {
+      if (online) statusDot.classList.add('online');
+      else statusDot.classList.remove('online');
+      statusText.textContent = message;
+    }
+
+    function setLoading(loading) {
+      askBtn.disabled = loading;
+      questionInput.disabled = loading;
+      askBtn.innerHTML = loading ? '<span class="spinner"></span> Thinking...' : '🚀 Ask Question';
+    }
+
+    function addMessage(role, content) {
+      const isUser = role === 'user';
+      const message = document.createElement('div');
+      message.className = `message ${role}`;
+
+      // Prevent HTML injection
+      const safeContent = String(content)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;");
+
+      message.innerHTML = `
+        <div class="message-header">
+          <div class="message-avatar">${isUser ? 'U' : 'AI'}</div>
+          <div class="message-meta">
+            <div class="message-role">${isUser ? 'You' : 'AI Assistant'}</div>
+            <div class="message-time">${getTimestamp()}</div>
+          </div>
+        </div>
+        <div class="message-content">${safeContent}</div>
+      `;
+
+      chatContainer.appendChild(message);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    // ==============================
+    // API Functions
+    // ==============================
+    async function askQuestion() {
+      const question = questionInput.value.trim();
+
+      if (!question) {
+        showAlert('Please enter a question first!', 'error');
+        questionInput.focus();
+        return;
+      }
+
+      addMessage('user', question);
+      setLoading(true);
+      alertBox.classList.remove('show');
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000);
+
+      try {
+        const response = await fetch(FUNCTION_URL, {
+          method: 'POST',
+          mode: 'cors',
+          cache: 'no-store',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question, context: "" }),
+          signal: controller.signal
+        });
+
+        if (!response.ok) {
+          const t = await response.text().catch(() => "");
+          throw new Error(`Server responded with status ${response.status}${t ? `: ${t}` : ""}`);
+        }
+
+        const data = await response.json();
+
+        if (data.error) throw new Error(data.error);
+
+        const answer = data.answer || 'I apologize, but I could not generate a response.';
+        addMessage('assistant', answer);
+
+        lastResponse = answer;
+        copyBtn.disabled = false;
+
+        setStatus(true, 'Assistant online and ready');
+        questionInput.value = '';
+        updateCharCount();
+
+      } catch (error) {
+        console.error('Error:', error);
+        const msg = (error && error.name === "AbortError")
+          ? "Request timed out. Please try again."
+          : (error && error.message ? error.message : "Failed to fetch");
+
+        showAlert(`Failed to get response: ${msg}`, 'error');
+        addMessage('assistant', 'I apologize, but I encountered an error. Please try again or check your connection.');
+        setStatus(false, 'Connection error');
+      } finally {
+        clearTimeout(timeout);
+        setLoading(false);
+      }
+    }
+
+    function resetChat() {
+      chatContainer.innerHTML = '';
+      addMessage('assistant', 'Hi! I\'m an AI assistant trained on Venkata\'s professional background. Ask me anything about his experience, education, skills, or projects!');
+      questionInput.value = '';
+      lastResponse = '';
+      copyBtn.disabled = true;
+      updateCharCount();
+      alertBox.classList.remove('show');
+      setStatus(true, "Ready");
+    }
+
+    async function copyResponse() {
+      if (!lastResponse) return;
+      try {
+        await navigator.clipboard.writeText(lastResponse);
+        showAlert('Response copied to clipboard!', 'success');
+      } catch (error) {
+        showAlert('Failed to copy. Please try manually selecting the text.', 'error');
+      }
+    }
+
+    function askExample(question) {
+      questionInput.value = question;
+      updateCharCount();
+      questionInput.focus();
+    }
+
+    // ==============================
+    // Event Listeners
+    // ==============================
+    askBtn.addEventListener('click', askQuestion);
+    resetBtn.addEventListener('click', resetChat);
+    copyBtn.addEventListener('click', copyResponse);
+
+    questionInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        askQuestion();
+      }
+    });
+
+    questionInput.addEventListener('input', updateCharCount);
+
+    window.askExample = askExample;
+
+    // ==============================
+    // Initialize
+    // ==============================
+    updateCharCount();
+    setStatus(true, "Ready");
+  </script>
+</body>
+</html>
