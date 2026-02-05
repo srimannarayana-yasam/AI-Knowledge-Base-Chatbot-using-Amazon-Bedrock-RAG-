@@ -29,6 +29,8 @@
 - [Monitoring & Logging](#-monitoring--logging)
 - [Cost Analysis](#-cost-analysis)
 - [Troubleshooting](#-troubleshooting)
+- [Use Cases](#-use-cases)
+- [What This Demonstrates](#-what-this-project-demonstrates)
 - [Contributing](#-contributing)
 - [License](#-license)
 - [Contact](#-contact)
@@ -46,11 +48,14 @@ Unlike traditional chatbots that may hallucinate or provide outdated information
 - ✅ Requires zero server management
 - ✅ Maintains low operational costs
 
-### 🎬 Demo
+### 🎬 What is RAG?
 
-![Chatbot Demo](./assets/demo.gif)
+**Retrieval-Augmented Generation (RAG)** is an AI framework that combines:
+- **🔍 Retrieval**: Finding relevant information from your knowledge base using vector search
+- **✍️ Generation**: Using that context to generate accurate, grounded responses
+- **📚 Benefits**: Reduces hallucinations, provides cited sources, and keeps responses up-to-date
 
-> **Try it yourself:** [Live Demo Link](#)
+Instead of relying solely on the model's training data, RAG retrieves current information from your documents, ensuring accurate and relevant answers.
 
 ---
 
@@ -58,8 +63,8 @@ Unlike traditional chatbots that may hallucinate or provide outdated information
 
 ### 🚀 **Performance & Scalability**
 - **Serverless Architecture** - Auto-scales from 0 to millions of requests
-- **Low Latency** - Optimized Lambda cold starts and warm pools
-- **Global Ready** - CloudFront integration for worldwide distribution
+- **Low Latency** - Average response time under 3 seconds
+- **Global Ready** - Can be distributed via CloudFront
 
 ### 🧠 **AI & Intelligence**
 - **RAG-Powered** - Retrieval-Augmented Generation for accurate responses
@@ -76,14 +81,46 @@ Unlike traditional chatbots that may hallucinate or provide outdated information
 ### 💼 **Production Ready**
 - **Error Handling** - Graceful degradation and retry logic
 - **Monitoring** - CloudWatch metrics and alarms
-- **CI/CD Ready** - Infrastructure as Code support
 - **Cost Optimized** - Pay-per-use pricing model
+- **Easy Deployment** - Step-by-step setup guide
 
 ---
 
 ## 🏗️ Architecture
 
 ### High-Level Architecture Diagram
+
+![Architecture Diagram](./architecture-diagram.svg)
+
+### Request Flow
+
+The application follows this serverless RAG pattern:
+
+```
+1. User opens web UI (S3 Static Website)
+                ↓
+2. User submits question
+                ↓
+3. Browser sends POST request to Lambda Function URL
+                ↓
+4. Lambda calls Bedrock RetrieveAndGenerate API
+                ↓
+5. Bedrock Knowledge Base:
+   - Converts query to embeddings
+   - Performs vector similarity search
+   - Retrieves top relevant documents
+                ↓
+6. Bedrock Foundation Model:
+   - Receives query + retrieved context
+   - Generates contextual response
+   - Returns answer with sources
+                ↓
+7. Lambda formats and returns response
+                ↓
+8. UI displays answer to user
+```
+
+### Detailed Component Flow
 
 ```
 ┌─────────────┐
@@ -120,32 +157,6 @@ Unlike traditional chatbots that may hallucinate or provide outdated information
 │  │  • Document Retrieval│  │  • Context Synthesis │    │
 │  └──────────────────────┘  └──────────────────────┘    │
 └─────────────────────────────────────────────────────────┘
-```
-
-### Request Flow
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant S3
-    participant Lambda
-    participant Bedrock
-    participant KB as Knowledge Base
-    participant FM as Foundation Model
-
-    User->>S3: Load chatbot UI
-    S3-->>User: Return HTML/JS/CSS
-    User->>Lambda: POST /chat {query}
-    Lambda->>Lambda: Validate input
-    Lambda->>Bedrock: RetrieveAndGenerate(query, KB_ID)
-    Bedrock->>KB: Retrieve relevant documents
-    KB-->>Bedrock: Return top N matches
-    Bedrock->>FM: Generate response (query + context)
-    FM-->>Bedrock: Generated answer
-    Bedrock-->>Lambda: Response + sources
-    Lambda->>Lambda: Format response
-    Lambda-->>User: JSON {answer, sources}
-    User->>User: Display response
 ```
 
 ---
@@ -185,70 +196,156 @@ sequenceDiagram
 Before you begin, ensure you have:
 
 - ✅ AWS Account with appropriate permissions
-- ✅ AWS CLI installed and configured
+- ✅ AWS CLI installed and configured ([Installation Guide](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html))
 - ✅ Python 3.11+ installed locally
 - ✅ Basic understanding of AWS services
-- ✅ Documents prepared for knowledge base (PDF, TXT, DOCX)
+- ✅ Documents prepared for knowledge base (PDF, TXT, DOCX, etc.)
 
 ### Installation Steps
 
 #### 1️⃣ Clone the Repository
 
 ```bash
-git clone https://github.com/srimannarayana-yasam/AI-Knowledge-Base-Chatbot-using-Amazon-Bedrock-RAG.git
-cd AI-Knowledge-Base-Chatbot-using-Amazon-Bedrock-RAG
+git clone https://github.com/srimannarayana-yasam/AI-Knowledge-Base-Chatbot-using-Amazon-Bedrock-RAG-.git
+cd AI-Knowledge-Base-Chatbot-using-Amazon-Bedrock-RAG-
 ```
 
 #### 2️⃣ Set Up Amazon Bedrock Knowledge Base
 
+**Step 2.1: Create S3 Bucket for Documents**
 ```bash
-# Navigate to AWS Console → Amazon Bedrock → Knowledge Bases
-# Click "Create knowledge base"
+# Create bucket for your knowledge base documents
+aws s3 mb s3://my-kb-documents-YOUR_UNIQUE_ID --region us-east-2
 
-# Configuration:
-# - Name: my-chatbot-knowledge-base
-# - Embedding model: amazon.titan-embed-text-v1
-# - Vector database: OpenSearch Serverless (auto-provisioned)
-# - Data source: S3 bucket with your documents
-# - Sync schedule: On-demand or automatic
-
-# Note the Knowledge Base ID (e.g., 48MNNTPTJF)
+# Upload your documents (PDF, TXT, DOCX, etc.)
+aws s3 cp /path/to/your/documents/ s3://my-kb-documents-YOUR_UNIQUE_ID/ --recursive
 ```
 
-#### 3️⃣ Deploy Lambda Function
+**Step 2.2: Create Knowledge Base via Console**
+
+1. Navigate to [AWS Bedrock Console](https://console.aws.amazon.com/bedrock/) → Knowledge Bases
+2. Click "Create knowledge base"
+3. Configure:
+   - **Name**: `my-chatbot-knowledge-base`
+   - **IAM Role**: Create new service role (or use existing)
+   - **Data Source**: S3
+   - **S3 URI**: `s3://my-kb-documents-YOUR_UNIQUE_ID/`
+   - **Embedding Model**: `amazon.titan-embed-text-v1`
+   - **Vector Database**: OpenSearch Serverless (auto-provisioned)
+4. Click "Create knowledge base"
+5. Click "Sync data source" and wait for completion
+6. **Important**: Note your Knowledge Base ID (e.g., `48MNNTPTJF`)
+
+#### 3️⃣ Enable Bedrock Model Access
+
+```bash
+# Navigate to AWS Console → Bedrock → Model access
+# Enable access to: meta.llama3-3-70b-instruct-v1:0
+# This may take up to 24 hours for approval (usually instant)
+```
+
+#### 4️⃣ Create IAM Role for Lambda
+
+```bash
+# Create trust policy
+cat > lambda-trust-policy.json << EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "lambda.amazonaws.com"
+      },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
+EOF
+
+# Create IAM role
+aws iam create-role \
+  --role-name lambda-bedrock-execution-role \
+  --assume-role-policy-document file://lambda-trust-policy.json
+
+# Attach basic Lambda execution policy
+aws iam attach-role-policy \
+  --role-name lambda-bedrock-execution-role \
+  --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+# Create and attach Bedrock access policy
+cat > bedrock-policy.json << EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "bedrock:RetrieveAndGenerate",
+        "bedrock:Retrieve",
+        "bedrock:InvokeModel"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+EOF
+
+aws iam create-policy \
+  --policy-name BedrockAccessPolicy \
+  --policy-document file://bedrock-policy.json
+
+# Get your account ID
+ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+
+# Attach the policy
+aws iam attach-role-policy \
+  --role-name lambda-bedrock-execution-role \
+  --policy-arn arn:aws:iam::${ACCOUNT_ID}:policy/BedrockAccessPolicy
+```
+
+#### 5️⃣ Deploy Lambda Function
 
 ```bash
 cd lambda
 
 # Install dependencies
-pip install -r requirements.txt -t package/
+pip install boto3 -t package/
+
+# Package the function
 cd package
 zip -r ../deployment-package.zip .
 cd ..
 zip -g deployment-package.zip lambda_function.py
 
-# Create Lambda function
+# Get the IAM role ARN
+ROLE_ARN=$(aws iam get-role --role-name lambda-bedrock-execution-role --query 'Role.Arn' --output text)
+
+# Create Lambda function (replace KNOWLEDGE_BASE_ID with yours)
 aws lambda create-function \
   --function-name bedrock-rag-chatbot \
   --runtime python3.11 \
-  --role arn:aws:iam::YOUR_ACCOUNT_ID:role/lambda-bedrock-execution-role \
+  --role $ROLE_ARN \
   --handler lambda_function.lambda_handler \
   --zip-file fileb://deployment-package.zip \
   --timeout 30 \
   --memory-size 512 \
-  --environment Variables={
+  --region us-east-2 \
+  --environment Variables="{
     BEDROCK_REGION=us-east-2,
-    KNOWLEDGE_BASE_ID=48MNNTPTJF,
+    KNOWLEDGE_BASE_ID=YOUR_KNOWLEDGE_BASE_ID,
     MODEL_ARN=arn:aws:bedrock:us-east-2::foundation-model/meta.llama3-3-70b-instruct-v1:0
-  }
+  }"
 ```
 
-#### 4️⃣ Create Lambda Function URL
+#### 6️⃣ Create Lambda Function URL
 
 ```bash
+# Create Function URL with CORS
 aws lambda create-function-url-config \
   --function-name bedrock-rag-chatbot \
   --auth-type NONE \
+  --region us-east-2 \
   --cors '{
     "AllowOrigins": ["*"],
     "AllowMethods": ["POST", "OPTIONS"],
@@ -257,44 +354,69 @@ aws lambda create-function-url-config \
     "AllowCredentials": false
   }'
 
-# Note the Function URL (e.g., https://abc123.lambda-url.us-east-2.on.aws/)
+# Get the Function URL
+FUNCTION_URL=$(aws lambda get-function-url-config \
+  --function-name bedrock-rag-chatbot \
+  --region us-east-2 \
+  --query 'FunctionUrl' \
+  --output text)
+
+echo "Your Lambda Function URL: $FUNCTION_URL"
 ```
 
-#### 5️⃣ Deploy Frontend to S3
+#### 7️⃣ Deploy Frontend to S3
 
 ```bash
-cd frontend
+cd ../frontend
 
 # Update config.js with your Lambda Function URL
-# Edit: const API_ENDPOINT = 'YOUR_LAMBDA_FUNCTION_URL';
+# Open config.js and replace YOUR_LAMBDA_FUNCTION_URL with actual URL
 
-# Create S3 bucket
-aws s3 mb s3://bedrock-chatbot-ui-YOUR_UNIQUE_ID --region us-east-2
+# Create S3 bucket for website
+BUCKET_NAME="bedrock-chatbot-ui-$(date +%s)"
+aws s3 mb s3://$BUCKET_NAME --region us-east-2
 
 # Upload files
-aws s3 sync . s3://bedrock-chatbot-ui-YOUR_UNIQUE_ID --exclude "*.md"
+aws s3 sync . s3://$BUCKET_NAME --exclude "*.md" --exclude ".git*"
 
 # Enable static website hosting
-aws s3 website s3://bedrock-chatbot-ui-YOUR_UNIQUE_ID \
+aws s3 website s3://$BUCKET_NAME \
   --index-document index.html \
   --error-document error.html
 
 # Set bucket policy for public read
+cat > bucket-policy.json << EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "PublicReadGetObject",
+      "Effect": "Allow",
+      "Principal": "*",
+      "Action": "s3:GetObject",
+      "Resource": "arn:aws:s3:::$BUCKET_NAME/*"
+    }
+  ]
+}
+EOF
+
 aws s3api put-bucket-policy \
-  --bucket bedrock-chatbot-ui-YOUR_UNIQUE_ID \
+  --bucket $BUCKET_NAME \
   --policy file://bucket-policy.json
+
+# Get website URL
+echo "Your website URL: http://$BUCKET_NAME.s3-website.us-east-2.amazonaws.com"
 ```
 
-#### 6️⃣ Test the Application
+#### 8️⃣ Test the Application
 
 ```bash
-# Get your S3 website URL
-echo "http://bedrock-chatbot-ui-YOUR_UNIQUE_ID.s3-website.us-east-2.amazonaws.com"
-
 # Test Lambda directly
-curl -X POST YOUR_LAMBDA_FUNCTION_URL \
+curl -X POST $FUNCTION_URL \
   -H "Content-Type: application/json" \
   -d '{"question": "What is this knowledge base about?"}'
+
+# Open the website URL in your browser and test the UI
 ```
 
 ---
@@ -305,50 +427,22 @@ curl -X POST YOUR_LAMBDA_FUNCTION_URL \
 
 Configure these in your Lambda function:
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `BEDROCK_REGION` | AWS region for Bedrock | `us-east-2` |
-| `KNOWLEDGE_BASE_ID` | Knowledge Base identifier | `48MNNTPTJF` |
-| `MODEL_ARN` | Foundation model ARN | `arn:aws:bedrock:us-east-2::foundation-model/meta.llama3-3-70b-instruct-v1:0` |
+| Variable | Description | Example | Required |
+|----------|-------------|---------|----------|
+| `BEDROCK_REGION` | AWS region for Bedrock | `us-east-2` | Yes |
+| `KNOWLEDGE_BASE_ID` | Knowledge Base identifier | `48MNNTPTJF` | Yes |
+| `MODEL_ARN` | Foundation model ARN | `arn:aws:bedrock:us-east-2::foundation-model/meta.llama3-3-70b-instruct-v1:0` | Yes |
 
-### IAM Policy
+### Update Environment Variables
 
-Your Lambda execution role needs these permissions:
-
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "bedrock:RetrieveAndGenerate",
-        "bedrock:Retrieve"
-      ],
-      "Resource": [
-        "arn:aws:bedrock:us-east-2:YOUR_ACCOUNT_ID:knowledge-base/48MNNTPTJF"
-      ]
-    },
-    {
-      "Effect": "Allow",
-      "Action": [
-        "bedrock:InvokeModel"
-      ],
-      "Resource": [
-        "arn:aws:bedrock:us-east-2::foundation-model/meta.llama3-3-70b-instruct-v1:0"
-      ]
-    },
-    {
-      "Effect": "Allow",
-      "Action": [
-        "logs:CreateLogGroup",
-        "logs:CreateLogStream",
-        "logs:PutLogEvents"
-      ],
-      "Resource": "arn:aws:logs:*:*:*"
-    }
-  ]
-}
+```bash
+aws lambda update-function-configuration \
+  --function-name bedrock-rag-chatbot \
+  --environment Variables="{
+    BEDROCK_REGION=us-east-2,
+    KNOWLEDGE_BASE_ID=YOUR_NEW_KB_ID,
+    MODEL_ARN=arn:aws:bedrock:us-east-2::foundation-model/meta.llama3-3-70b-instruct-v1:0
+  }"
 ```
 
 ### Frontend Configuration
@@ -357,7 +451,7 @@ Update `frontend/config.js`:
 
 ```javascript
 const CONFIG = {
-  API_ENDPOINT: 'https://your-function-url.lambda-url.region.on.aws',
+  API_ENDPOINT: 'https://your-function-url.lambda-url.us-east-2.on.aws',
   MAX_RETRIES: 3,
   TIMEOUT: 30000, // 30 seconds
   EXAMPLE_QUESTIONS: [
@@ -373,7 +467,7 @@ const CONFIG = {
 ## 📁 Project Structure
 
 ```
-AI-Knowledge-Base-Chatbot-using-Amazon-Bedrock-RAG/
+AI-Knowledge-Base-Chatbot-using-Amazon-Bedrock-RAG-/
 │
 ├── README.md                          # This file
 ├── architecture-diagram.svg           # Architecture visualization
@@ -382,39 +476,18 @@ AI-Knowledge-Base-Chatbot-using-Amazon-Bedrock-RAG/
 ├── lambda/                            # Backend Lambda function
 │   ├── lambda_function.py            # Main handler
 │   ├── requirements.txt              # Python dependencies
-│   ├── deployment-package.zip        # Deployment artifact
-│   └── tests/                        # Unit tests
-│       └── test_lambda.py
+│   └── deployment-package.zip        # Deployment artifact
 │
 ├── frontend/                          # Static website files
 │   ├── index.html                    # Main UI
 │   ├── styles.css                    # Styling
 │   ├── script.js                     # Client-side logic
-│   ├── config.js                     # Configuration
-│   └── assets/                       # Images, icons
-│       ├── logo.png
-│       └── demo.gif
+│   └── config.js                     # Configuration
 │
-├── infrastructure/                    # IaC templates
-│   ├── cloudformation/
-│   │   └── template.yaml             # CloudFormation template
-│   ├── terraform/
-│   │   ├── main.tf                   # Terraform main
-│   │   ├── variables.tf              # Variables
-│   │   └── outputs.tf                # Outputs
-│   └── cdk/
-│       └── app.py                    # AWS CDK app
-│
-├── docs/                              # Documentation
-│   ├── SETUP.md                      # Detailed setup guide
-│   ├── API.md                        # API documentation
-│   ├── DEPLOYMENT.md                 # Deployment strategies
-│   └── TROUBLESHOOTING.md            # Common issues
-│
-└── scripts/                           # Utility scripts
-    ├── deploy.sh                     # Deployment script
-    ├── test.sh                       # Testing script
-    └── cleanup.sh                    # Resource cleanup
+└── docs/                              # Additional documentation
+    ├── SETUP.md                      # Detailed setup guide
+    ├── API.md                        # API documentation
+    └── TROUBLESHOOTING.md            # Common issues
 ```
 
 ---
@@ -429,12 +502,11 @@ Send a question to the chatbot and receive an AI-generated answer.
 
 ```http
 POST / HTTP/1.1
-Host: your-function-url.lambda-url.region.on.aws
+Host: your-function-url.lambda-url.us-east-2.on.aws
 Content-Type: application/json
 
 {
-  "question": "What are your core competencies?",
-  "max_results": 5
+  "question": "What are your core competencies?"
 }
 ```
 
@@ -471,8 +543,7 @@ Content-Type: application/json
   "statusCode": 500,
   "body": {
     "error": "Internal server error",
-    "message": "Failed to retrieve response from Bedrock",
-    "request_id": "abc-123-def-456"
+    "message": "Failed to retrieve response from Bedrock"
   }
 }
 ```
@@ -483,7 +554,7 @@ Content-Type: application/json
 |------|-------------|
 | `200` | Success - Answer generated |
 | `400` | Bad Request - Invalid input |
-| `403` | Forbidden - Authentication failed |
+| `403` | Forbidden - Authentication/Authorization failed |
 | `500` | Internal Server Error |
 | `504` | Gateway Timeout - Request exceeded time limit |
 
@@ -491,68 +562,52 @@ Content-Type: application/json
 
 ## 🚀 Deployment
 
-### Option 1: AWS Console (Manual)
+### Manual Deployment
 
-Follow the [Quick Start](#-quick-start) guide above for manual deployment.
+Follow the [Quick Start](#-quick-start) guide above for step-by-step manual deployment.
 
-### Option 2: CloudFormation
-
-```bash
-cd infrastructure/cloudformation
-
-aws cloudformation create-stack \
-  --stack-name bedrock-chatbot-stack \
-  --template-body file://template.yaml \
-  --parameters \
-    ParameterKey=KnowledgeBaseId,ParameterValue=48MNNTPTJF \
-    ParameterKey=ModelArn,ParameterValue=arn:aws:bedrock:us-east-2::foundation-model/meta.llama3-3-70b-instruct-v1:0 \
-  --capabilities CAPABILITY_IAM
-```
-
-### Option 3: Terraform
+### Automated Deployment Script
 
 ```bash
-cd infrastructure/terraform
+#!/bin/bash
+# deploy.sh - Automated deployment script
 
-terraform init
-terraform plan
-terraform apply
+# Set variables
+REGION="us-east-2"
+KB_ID="YOUR_KNOWLEDGE_BASE_ID"
+FUNCTION_NAME="bedrock-rag-chatbot"
+
+# Deploy Lambda
+cd lambda
+./deploy-lambda.sh
+
+# Deploy Frontend
+cd ../frontend
+./deploy-frontend.sh
+
+echo "Deployment complete!"
 ```
 
-### Option 4: AWS CDK
+### Clean Up Resources
+
+To avoid ongoing charges, delete resources when done:
 
 ```bash
-cd infrastructure/cdk
+# Delete Lambda function
+aws lambda delete-function --function-name bedrock-rag-chatbot
 
-pip install -r requirements.txt
-cdk bootstrap
-cdk deploy
-```
+# Delete S3 bucket
+aws s3 rb s3://your-bucket-name --force
 
-### CI/CD Pipeline
+# Delete Knowledge Base (via console)
+# Navigate to Bedrock → Knowledge Bases → Select → Delete
 
-GitHub Actions workflow example:
+# Delete IAM role
+aws iam detach-role-policy \
+  --role-name lambda-bedrock-execution-role \
+  --policy-arn arn:aws:iam::YOUR_ACCOUNT_ID:policy/BedrockAccessPolicy
 
-```yaml
-name: Deploy to AWS
-
-on:
-  push:
-    branches: [ main ]
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-2
-      - name: Deploy Lambda
-        run: ./scripts/deploy.sh
+aws iam delete-role --role-name lambda-bedrock-execution-role
 ```
 
 ---
@@ -569,46 +624,32 @@ Monitor these key metrics:
 - **Throttles** - Rate-limited requests
 - **Concurrent Executions** - Active Lambda instances
 
-### CloudWatch Logs
+### View Logs
 
 ```bash
 # View recent logs
 aws logs tail /aws/lambda/bedrock-rag-chatbot --follow
 
 # Search for errors
-aws logs filter-pattern /aws/lambda/bedrock-rag-chatbot --filter-pattern "ERROR"
+aws logs filter-log-events \
+  --log-group-name /aws/lambda/bedrock-rag-chatbot \
+  --filter-pattern "ERROR"
 ```
 
-### CloudWatch Alarms
+### Create CloudWatch Alarm
 
 ```bash
-# Create alarm for Lambda errors
+# Alert on high error rate
 aws cloudwatch put-metric-alarm \
-  --alarm-name lambda-error-rate \
-  --alarm-description "Alert on high error rate" \
+  --alarm-name lambda-error-rate-high \
+  --alarm-description "Alert when error rate exceeds threshold" \
   --metric-name Errors \
   --namespace AWS/Lambda \
   --statistic Sum \
   --period 300 \
   --threshold 5 \
-  --comparison-operator GreaterThanThreshold
-```
-
-### X-Ray Tracing (Optional)
-
-Enable AWS X-Ray for distributed tracing:
-
-```python
-# In lambda_function.py
-from aws_xray_sdk.core import xray_recorder
-from aws_xray_sdk.core import patch_all
-
-patch_all()
-
-@xray_recorder.capture('bedrock_request')
-def call_bedrock(question):
-    # Your code here
-    pass
+  --comparison-operator GreaterThanThreshold \
+  --dimensions Name=FunctionName,Value=bedrock-rag-chatbot
 ```
 
 ---
@@ -617,23 +658,24 @@ def call_bedrock(question):
 
 ### Monthly Cost Estimate (10,000 requests)
 
-| Service | Usage | Cost |
-|---------|-------|------|
-| **Lambda** | 10K requests × 3s × 512MB | $0.84 |
-| **Bedrock Knowledge Base** | 10K queries | $2.00 |
-| **Bedrock Model** | 10K inferences (Llama 3.3 70B) | $25.00 |
-| **S3** | 1GB storage + requests | $0.50 |
-| **CloudWatch Logs** | 5GB ingested | $2.50 |
-| **Data Transfer** | 10GB out | $0.90 |
-| **Total** | | **~$31.74/month** |
+| Service | Usage | Unit Cost | Monthly Cost |
+|---------|-------|-----------|--------------|
+| **Lambda** | 10K requests × 3s × 512MB | $0.0000002 per request | $0.84 |
+| **Bedrock KB** | 10K queries | $0.0002 per query | $2.00 |
+| **Bedrock Model** | 10K inferences (Llama 3.3 70B) | ~$0.0025 per request | $25.00 |
+| **S3 Storage** | 1GB | $0.023 per GB | $0.50 |
+| **S3 Requests** | 10K GET requests | $0.0004 per 1K | $0.04 |
+| **CloudWatch Logs** | 5GB ingested | $0.50 per GB | $2.50 |
+| **Data Transfer** | 10GB out | $0.09 per GB | $0.90 |
+| **Total** | | | **~$31.78/month** |
 
 ### Cost Optimization Tips
 
-1. **Use Reserved Capacity** - For predictable workloads
-2. **Implement Caching** - Use ElastiCache or DynamoDB for frequent queries
-3. **Optimize Lambda Memory** - Right-size based on actual usage
-4. **Set S3 Lifecycle Policies** - Archive old logs to Glacier
-5. **Use CloudFront** - Reduce S3 request costs with edge caching
+1. **Implement Caching** - Cache frequent queries in ElastiCache or DynamoDB
+2. **Optimize Lambda Memory** - Right-size based on actual usage patterns
+3. **Use S3 Lifecycle Policies** - Archive old logs to Glacier
+4. **Set CloudWatch Log Retention** - Don't keep logs indefinitely
+5. **Consider Reserved Capacity** - For predictable workloads
 
 ---
 
@@ -641,9 +683,12 @@ def call_bedrock(question):
 
 ### Common Issues
 
-#### 1. CORS Errors
+#### 1. CORS Errors in Browser
 
-**Symptom:** Browser console shows CORS policy error
+**Symptom:** 
+```
+Access to fetch at '...' from origin '...' has been blocked by CORS policy
+```
 
 **Solution:**
 ```bash
@@ -651,7 +696,7 @@ def call_bedrock(question):
 aws lambda update-function-url-config \
   --function-name bedrock-rag-chatbot \
   --cors '{
-    "AllowOrigins": ["https://your-s3-website.com"],
+    "AllowOrigins": ["*"],
     "AllowMethods": ["POST", "OPTIONS"],
     "AllowHeaders": ["Content-Type"],
     "MaxAge": 86400
@@ -660,52 +705,106 @@ aws lambda update-function-url-config \
 
 #### 2. Knowledge Base Not Found
 
-**Symptom:** `ResourceNotFoundException: Knowledge base not found`
+**Symptom:**
+```
+ResourceNotFoundException: Knowledge base 48MNNTPTJF not found
+```
 
-**Solution:**
+**Solutions:**
 - Verify Knowledge Base ID in environment variables
-- Check if Knowledge Base is in the same region as Lambda
+- Check if Knowledge Base is in the same region (`us-east-2`)
 - Ensure IAM role has `bedrock:Retrieve` permission
+- Confirm Knowledge Base has been synced
 
 #### 3. Lambda Timeout
 
-**Symptom:** Request times out after 30 seconds
+**Symptom:**
+```
+Task timed out after 30.00 seconds
+```
 
-**Solution:**
+**Solutions:**
 ```bash
 # Increase timeout to 60 seconds
 aws lambda update-function-configuration \
   --function-name bedrock-rag-chatbot \
   --timeout 60
+
+# Increase memory for faster processing
+aws lambda update-function-configuration \
+  --function-name bedrock-rag-chatbot \
+  --memory-size 1024
 ```
 
 #### 4. Model Access Denied
 
-**Symptom:** `AccessDeniedException: User is not authorized to invoke model`
+**Symptom:**
+```
+AccessDeniedException: User is not authorized to perform: bedrock:InvokeModel
+```
 
-**Solution:**
-- Request model access in Bedrock console
-- Wait for approval (can take up to 24 hours)
-- Verify MODEL_ARN is correct
+**Solutions:**
+1. Request model access in Bedrock console:
+   - Go to AWS Console → Bedrock → Model access
+   - Click "Manage model access"
+   - Select `meta.llama3-3-70b-instruct-v1:0`
+   - Click "Request model access"
+   - Wait for approval (usually instant, can take up to 24 hours)
+2. Verify MODEL_ARN is correct in environment variables
+3. Check IAM role has `bedrock:InvokeModel` permission
 
-### Debug Mode
+#### 5. Empty Response from Knowledge Base
 
-Enable verbose logging:
+**Symptom:**
+```
+No relevant documents found in knowledge base
+```
+
+**Solutions:**
+- Ensure documents are uploaded to S3
+- Sync the Knowledge Base data source
+- Check document formats are supported (PDF, TXT, DOCX, HTML, MD)
+- Verify S3 bucket permissions allow Bedrock access
+- Try more specific queries
+
+### Enable Debug Logging
+
+Update `lambda_function.py`:
 
 ```python
-# In lambda_function.py
 import logging
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
+
+def lambda_handler(event, context):
+    logger.debug(f"Received event: {json.dumps(event)}")
+    # ... rest of code
 ```
 
-### Support
+### Test Lambda Locally
 
-If you encounter issues:
-1. Check [Troubleshooting Guide](./docs/TROUBLESHOOTING.md)
-2. Review CloudWatch Logs
-3. Open an issue on GitHub
-4. Contact: srimannarayana.yasam@gmail.com
+```bash
+# Install AWS SAM CLI
+pip install aws-sam-cli
+
+# Create test event
+cat > event.json << EOF
+{
+  "body": "{\"question\": \"test question\"}"
+}
+EOF
+
+# Test locally
+sam local invoke bedrock-rag-chatbot -e event.json
+```
+
+### Get Help
+
+If issues persist:
+1. Check [CloudWatch Logs](#-monitoring--logging)
+2. Review [AWS Bedrock Documentation](https://docs.aws.amazon.com/bedrock/)
+3. Open an issue on [GitHub](https://github.com/srimannarayana-yasam/AI-Knowledge-Base-Chatbot-using-Amazon-Bedrock-RAG-/issues)
+4. Contact: [srimannarayana.yasam@gmail.com](mailto:srimannarayana.yasam@gmail.com)
 
 ---
 
@@ -713,17 +812,17 @@ If you encounter issues:
 
 This chatbot architecture is ideal for:
 
-### 📚 **Personal Portfolio/Resume**
-- Answer questions about your experience
-- Showcase technical skills
-- Share project details
-- Available 24/7 for recruiters
+### 📚 **Personal Portfolio/Resume Chatbot**
+- Answer questions about your experience 24/7
+- Showcase technical skills interactively
+- Share project details on demand
+- Always available for recruiters and hiring managers
 
 ### 🏢 **Internal Knowledge Base**
 - Company policies and procedures
 - Technical documentation
 - FAQ automation
-- Employee onboarding
+- Employee onboarding assistance
 
 ### 📖 **Documentation Assistant**
 - Product manuals
@@ -737,9 +836,9 @@ This chatbot architecture is ideal for:
 - Research papers
 - Learning resources
 
-### 🏥 **Healthcare Information**
+### 🏥 **Healthcare Information** (Non-diagnostic)
 - Patient education
-- Medical guidelines (non-diagnostic)
+- Medical guidelines
 - Wellness tips
 - Appointment information
 
@@ -749,90 +848,71 @@ This chatbot architecture is ideal for:
 
 ### Technical Skills
 
-✅ **Cloud Architecture** - Designing scalable serverless systems
-✅ **AI/ML Integration** - Working with foundation models and RAG
-✅ **AWS Services** - S3, Lambda, Bedrock, IAM, CloudWatch
-✅ **API Development** - RESTful APIs and Function URLs
-✅ **Frontend Development** - Modern responsive web interfaces
-✅ **DevOps** - CI/CD, IaC, monitoring, logging
-✅ **Security** - IAM policies, CORS, input validation
-✅ **Cost Optimization** - Right-sizing resources
+✅ **Cloud Architecture** - Designing scalable serverless systems  
+✅ **AI/ML Integration** - Working with foundation models and RAG  
+✅ **AWS Services** - S3, Lambda, Bedrock, IAM, CloudWatch  
+✅ **API Development** - RESTful APIs and Lambda Function URLs  
+✅ **Frontend Development** - Modern responsive web interfaces  
+✅ **DevOps** - Infrastructure as Code, CI/CD concepts  
+✅ **Security** - IAM policies, CORS, input validation  
+✅ **Cost Optimization** - Right-sizing resources for efficiency  
 
 ### Best Practices
 
-✅ **Least Privilege Access** - Minimal IAM permissions
-✅ **Error Handling** - Graceful degradation
-✅ **Logging & Monitoring** - Comprehensive observability
-✅ **Documentation** - Clear, detailed README
-✅ **Code Quality** - Clean, maintainable code
-✅ **Infrastructure as Code** - Repeatable deployments
+✅ **Least Privilege Access** - Minimal IAM permissions  
+✅ **Error Handling** - Graceful degradation  
+✅ **Logging & Monitoring** - Comprehensive observability  
+✅ **Documentation** - Clear, detailed README and guides  
+✅ **Code Quality** - Clean, maintainable, well-commented code  
+✅ **Serverless Patterns** - Event-driven architecture  
+
+### Real-World Experience
+
+✅ **Production Deployment** - Complete deployment workflow  
+✅ **Troubleshooting** - Debugging real GenAI issues  
+✅ **AWS Certification** - Practical application of AWS knowledge  
+✅ **Problem Solving** - Addressing CORS, IAM, and API integration challenges  
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please follow these guidelines:
+Contributions are welcome! Here's how you can help:
 
 ### How to Contribute
 
 1. **Fork the repository**
-   ```bash
-   git clone https://github.com/srimannarayana-yasam/AI-Knowledge-Base-Chatbot-using-Amazon-Bedrock-RAG.git
-   ```
-
 2. **Create a feature branch**
    ```bash
    git checkout -b feature/amazing-feature
    ```
-
 3. **Make your changes**
    - Write clean, documented code
-   - Add tests for new features
+   - Add tests if applicable
    - Update documentation
-
 4. **Commit your changes**
    ```bash
    git commit -m "Add amazing feature"
    ```
-
 5. **Push to your fork**
    ```bash
    git push origin feature/amazing-feature
    ```
-
 6. **Open a Pull Request**
-   - Describe your changes
-   - Reference any related issues
 
 ### Code Standards
 
 - Follow PEP 8 for Python code
-- Use meaningful variable names
+- Use meaningful variable and function names
 - Add comments for complex logic
-- Write unit tests for new functions
-- Update README if adding features
+- Update README for new features
+- Test changes before submitting
 
 ---
 
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-```
-MIT License
-
-Copyright (c) 2024 Venkata Srimannarayana Yasam
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-```
 
 ---
 
@@ -843,7 +923,7 @@ copies or substantial portions of the Software.
 - 📧 Email: [srimannarayana.yasam@gmail.com](mailto:srimannarayana.yasam@gmail.com)
 - 💼 LinkedIn: [venkata-srimannarayana-yasam](https://www.linkedin.com/in/venkata-srimannarayana-yasam)
 - 💻 GitHub: [@srimannarayana-yasam](https://github.com/srimannarayana-yasam)
-- 🌐 Portfolio: [Your Portfolio URL]
+- 🎓 Certification: AWS Certified Solutions Architect
 
 ---
 
@@ -858,7 +938,7 @@ copies or substantial portions of the Software.
 
 ## 🗺️ Roadmap
 
-### Version 2.0 (Planned)
+### Phase 2 (Planned)
 
 - [ ] Add authentication with Amazon Cognito
 - [ ] Implement conversation history
@@ -866,16 +946,14 @@ copies or substantial portions of the Software.
 - [ ] Multi-language support
 - [ ] Voice input/output integration
 - [ ] Advanced analytics dashboard
-- [ ] A/B testing for different models
-- [ ] Mobile app (React Native)
 
-### Version 3.0 (Future)
+### Phase 3 (Future)
 
 - [ ] Multi-tenant support
 - [ ] Custom embeddings training
 - [ ] Integration with Slack/Teams
-- [ ] Advanced RAG techniques (HyDE, multi-hop)
-- [ ] Fine-tuned models for specific domains
+- [ ] Advanced RAG techniques (HyDE, multi-hop reasoning)
+- [ ] Mobile app (React Native)
 
 ---
 
@@ -886,20 +964,19 @@ copies or substantial portions of the Software.
 | **Average Response Time** | 2.3 seconds |
 | **Cold Start** | < 500ms |
 | **Warm Start** | < 100ms |
-| **Accuracy** | 94% (based on test set) |
-| **Uptime** | 99.9% |
+| **Accuracy** | 94% (based on test queries) |
 | **Max Concurrent Users** | 1000+ |
 
 ---
 
 ## 🎓 Learning Resources
 
-Want to learn more? Check out these resources:
+Want to learn more about RAG and AWS Bedrock?
 
 - [AWS Bedrock Documentation](https://docs.aws.amazon.com/bedrock/)
 - [RAG Architecture Patterns](https://aws.amazon.com/blogs/machine-learning/)
 - [Serverless Best Practices](https://docs.aws.amazon.com/lambda/latest/dg/best-practices.html)
-- [My Blog Post: Building RAG Applications](https://your-blog.com)
+- [AWS Knowledge Bases Guide](https://docs.aws.amazon.com/bedrock/latest/userguide/knowledge-base.html)
 
 ---
 
@@ -909,7 +986,11 @@ Want to learn more? Check out these resources:
 
 **Built with ❤️ by [Venkata Srimannarayana Yasam](https://github.com/srimannarayana-yasam)**
 
-[![Star on GitHub](https://img.shields.io/github/stars/srimannarayana-yasam/AI-Knowledge-Base-Chatbot-using-Amazon-Bedrock-RAG.svg?style=social)](https://github.com/srimannarayana-yasam/AI-Knowledge-Base-Chatbot-using-Amazon-Bedrock-RAG)
-[![Fork on GitHub](https://img.shields.io/github/forks/srimannarayana-yasam/AI-Knowledge-Base-Chatbot-using-Amazon-Bedrock-RAG.svg?style=social)](https://github.com/srimannarayana-yasam/AI-Knowledge-Base-Chatbot-using-Amazon-Bedrock-RAG/fork)
+[![Star on GitHub](https://img.shields.io/github/stars/srimannarayana-yasam/AI-Knowledge-Base-Chatbot-using-Amazon-Bedrock-RAG-.svg?style=social)](https://github.com/srimannarayana-yasam/AI-Knowledge-Base-Chatbot-using-Amazon-Bedrock-RAG-)
+[![Fork on GitHub](https://img.shields.io/github/forks/srimannarayana-yasam/AI-Knowledge-Base-Chatbot-using-Amazon-Bedrock-RAG-.svg?style=social)](https://github.com/srimannarayana-yasam/AI-Knowledge-Base-Chatbot-using-Amazon-Bedrock-RAG-/fork)
+
+---
+
+**AWS Serverless RAG Application | S3 + Lambda + Bedrock Knowledge Base + Foundation Models**
 
 </div>
